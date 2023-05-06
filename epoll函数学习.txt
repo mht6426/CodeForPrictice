@@ -1,0 +1,41 @@
+IO多路复用：
+	单线程或单进程同时检测若干个文件描述符是否可执行IO操作的能力
+
+select/poll:
+	时间复杂度 -> O(n)
+	监听文件描述符list，进行一个线性的查找 O(n)
+
+epoll：
+	时间复杂度 -> O(1)
+	使用了内核文件级别的回调机制O(1)
+	/proc/sys/fs/epoll/max_user_watches -> 最大文件描述符限制
+
+	epoll_create() -> 创建一个 epoll 实例 ，返回文件描述符
+	epoll_ctl() -> 将监听的文件描述符添加到epoll实例中，实例代码
+	为将标准输入文件描述符添加到epoll中
+	epoll_wait: 等待epoll事件从epoll实例中发生， 并返回事件以及
+	对应文件描述符l
+
+	触发方式：
+	水平触发：
+		socket接收缓冲区不为空 有数据可读 读事件一直触发
+		socket发送缓冲区不满 可以继续写入数据 写事件一直触发
+	边沿触发：
+		socket的接收缓冲区状态变化时触发读事件，即空的接收缓冲区刚接收到数据时触发读事件
+		socket的发送缓冲区状态变化时触发写事件，即满的缓冲区刚空出空间时触发读事件
+
+	注：边沿触发仅触发一次，水平触发会一直触发。
+
+常见宏定义：
+	EPOLL_CTL_ADD 添加节点
+	EPOLL_CTL_DEL 删除节点
+	EPOLL_CTL_MOD 修改节点监听事件
+ 
+	EPOLLIN ： 表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
+	EPOLLOUT： 表示对应的文件描述符可以写；
+	EPOLLPRI： 表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
+	EPOLLERR： 表示对应的文件描述符发生错误；
+	EPOLLHUP： 表示对应的文件描述符被挂断；
+	EPOLLET： 将 EPOLL设为边缘触发(Edge Triggered)模式（默认为水平触发），这是相对于水平触发(Level Triggered)来说的。
+	EPOLLONESHOT： 只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里
+

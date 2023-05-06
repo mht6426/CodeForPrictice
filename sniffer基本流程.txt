@@ -1,0 +1,35 @@
+基本流程：
+
+main：
+	1.传参 -> 调用 option结构体 ->利用 getopt_long函数 -> 赋值 GLOBAL_T
+	2.创建两个层级文件目录(暂未涉及) 
+	3.初始化定时器 -> itmerval结构体 -> setitimer函数 -> 为timer结构体定义滴答时钟
+	4.根据程序执行时传入的参数来确定要申请并传入线程中的参数的数量(worker_num) -> 申请 worker_num * struct sniffer_t 大小的内存
+	5.初始化每个线程的sniffer_t结构体参数 -> sniffer_t号/两个timer结构体 
+		5-1.根据程序执行时传入的参数来确定要执行的程序 
+			-i -> sniffer_init_live :
+				解析传入的需要监控的网卡个数 -> 以 "," 为截断条件(strpbrk)，将获取到的个数赋值于 niffer_dev_num -> 调用 niffer_dev_num 次 sniffer_dev_pcap_init()函数 
+					初始化相应网卡 
+				调用libcap库函数 -> pcap_open_live 打开相应的网卡,，返回 pcap_t * 类型的值(类似于返回文件描述符,应叫作会话句柄) -> pcap_setnonblock 将捕获句柄设置为“阻
+					塞 0”或者“非阻塞1”模式 -> pcap_compile 将想要过滤的筛选条件语句传入到上步申请的 bpf_program 类型变量中 -> pcap_setfilter 设置将要被处理的文件及过滤条件 
+					-> 准备工作基本完成
+
+			-f -> sniffer_init_offline :
+				解析 .pcap 文件 该模式下默认设置 sniffer->sniffer_dev_num = 1
+				调用libcap库函数 -> pcap_open_offline 打开参数指定的文件名，返回 pcap_t * 类型的值(类似于返回文件描述符,应叫作会话句柄) -> 申请 struct bpf_program 变量 -> pcap_compile 将想要过滤的筛选条件语句传入到上步申请的 bpf_program 类型变量中 -> pcap_setfilter 设置将要被处理的文件及过滤条件 -> 准备工作基本完成
+
+	6.创建的线程并根据程序执行时传入的参数来确定要执行的线程函数 
+		-i -> sniffer_thread_epoll：
+			1.屏蔽所有信号 -> sigset_t结构体 -> sigfillset()函数获取所有信号量 -> pthread_sigmask()函数 -> 传入 SIG_BLOCK宏定义 -> 该线程下屏蔽所有信号
+			2.初始化 epoll函数 并将 epoll_fd 赋值于 sniffer_epoll_fd -> pcap_fileno函数 将获取的数据包的文件描述符赋值于 pcap_fd 并将 ev.data.ptr指向
+				相应的 sniffer_dev_t 结构体 -> epoll_ctl()函数 将获取的数据包的文件描述符添加(EPOLL_CTL_ADD)进 epoll 函数 -> epoll_wait函数 等待事件发
+				生 -> pcap_next_ex()函数 捕获数据包 -> pack_routing()函数 解析数据包 -> pcap_pkthdr结构体 .caplen(实际捕获包的长度) .len(这个包的真实总长度)
+				-> 以太网数据包获取并根据链路层协议分析出网络层传输协议类型 -> process_ether_encap()函数 根据链路层分析出的网络层协议类型执行相应网络层协议处理函
+				数(ether_type)
+
+		-f -> sniffer_thread：
+			1.屏蔽所有信号 -> sigset_t结构体 -> sigfillset()函数获取所有信号量 -> pthread_sigmask()函数 -> 传入 SIG_BLOCK宏定义 -> 该线程下屏蔽所有信号
+			2.解析数据包 -> pcap_next_ex()函数 捕获数据包 -> pack_routing()函数 解析数据包 -> pcap_pkthdr结构体 .caplen(实际捕获包的长度) .len(这个包的真实总长度) ->
+				以太网数据包获取并根据链路层协议分析出网络层传输协议类型 -> process_ether_encap()函数 根据链路层分析出的网络层协议类型执行相应网络层协议处理函数(ether_type) 
+				
+	7.以IPV4数据包为例，解析报文( ether_type = ETH_P_IP)

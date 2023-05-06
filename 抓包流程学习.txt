@@ -1,0 +1,12 @@
+main.c文件：
+	1.解析可执行文件后参数 -> 相关结构体 GLOBAL_T 
+		-i 指定网卡   char devname[MAX_DEVNAME_LEN];
+		-f 指定文件   char filename[MAX_FILENAME_LEN];         
+		-n 指定线程个数 int worker_num;
+	2.创建文件夹
+	3.初始化 timer结构体中的滴答时钟及信号处理函数
+	4.根据指定的线程个数初始化线程相关结构体 sniffer_pool_init() 
+	5.初始化上步申请的结构体内参数(线程ID，epoll文件描述符，两个timer表)，
+	并根据传入的参数(文件还是网卡)来选择要执行的程序(eth:sniffer_init_live,
+	file:sniffer_init_offline)
+	6.根据传入的要使用的线程个数及指定的类型(文件、网卡)来创建线程
