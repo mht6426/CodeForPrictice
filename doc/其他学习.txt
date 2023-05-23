@@ -99,3 +99,12 @@ demo流程：
 				|
 	创建一个包含list_head的结构体，该结构体用于识别同一数据包下的包长度及包的顺序	-> 根据同一分片数据包的偏移量进行排序，及对该数据结构下
 	各节点的成员len进行求和及对比上层list_head所在结构体的成员len进行对比，若相同则代表包已完成组合	
+	
+	
+pcap包解析相关网站：
+	http://packetlife.net/captures/
+
+	https://wiki.wireshark.org/SampleCaptures/
+
+	https://www.netresec.com/?page=PcapFiles
+	
